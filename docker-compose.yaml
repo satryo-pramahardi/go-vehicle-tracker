@@ -1,0 +1,139 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - tracker-net
+  
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - tracker-net
+
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: mqtt
+    volumes:
+      - ./docker/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    ports:
+      - "${MQTT_PORT}:1883"
+    networks:
+      - tracker-net
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    ports:
+      - "${ADMINER_PORT}:8080"
+    networks:
+      - tracker-net
+
+  migrate:
+    profiles: ["migrate"]
+    build:
+      context: .
+      dockerfile: docker/migration/Dockerfile.migrate
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    depends_on:
+      - postgres
+    networks:
+      - tracker-net
+    command: ["go", "run", "cmd/migrate/main.go"]
+  
+  subscriber:
+    build:
+      context: .
+      dockerfile: docker/subscriber/Dockerfile.subscriber
+    container_name: subscriber
+    networks:
+      - tracker-net
+    environment:
+      - REDIS_ADDR=redis:6379
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - tracker-net
+
+  workers:
+    container_name: workers
+    build:
+      context: .
+      dockerfile: ./cmd/worker/Dockerfile.worker
+    environment:
+      - REDIS_ADDR=redis:6379
+      - DB_DSN=postgres://admin:password@postgres:5432/vehicle_tracker?sslmode=disable
+    depends_on:
+      - redis
+      - postgres
+    command: ["./workers"]
+    networks:
+      - tracker-net
+
+  publisher:
+    build:
+      context: .
+      dockerfile: ./cmd/publisher/Dockerfile.publisher
+    environment:
+      - MQTT_BROKER=mqtt:1883
+    entrypoint: ["./publisher"]
+    networks:
+      - tracker-net
+    profiles: ["manual"]
+
+  api:
+    build:
+      context: .
+      dockerfile: cmd/api/Dockerfile
+    container_name: api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - tracker-net
+
+  rabbitmq-consumer:
+    build:
+      context: .
+      dockerfile: cmd/rabbitmq_consumer/Dockerfile
+    container_name: rabbitmq-consumer
+    environment:
+      - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+    networks:
+      - tracker-net
+
+volumes:
+  pgdata:
+  rabbitmq_data:
+
+networks:
+  tracker-net:

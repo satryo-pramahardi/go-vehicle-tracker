@@ -1,0 +1,94 @@
+# Development override for docker-compose.yaml
+# This file is automatically loaded by docker-compose for development
+
+version: '3.8'
+
+services:
+  # Development-specific API configuration
+  api:
+    environment:
+      - GIN_MODE=debug
+      - LOG_LEVEL=debug
+    volumes:
+      - .:/app
+      - /app/vendor
+    ports:
+      - "8080:8080"
+    command: ["go", "run", "cmd/api/main.go"]
+
+  # Development-specific worker configuration
+  workers:
+    environment:
+      - LOG_LEVEL=debug
+    volumes:
+      - .:/app
+      - /app/vendor
+    command: ["go", "run", "cmd/worker/main.go"]
+
+  # Development-specific RabbitMQ consumer
+  rabbitmq-consumer:
+    environment:
+      - LOG_LEVEL=debug
+    volumes:
+      - .:/app
+      - /app/vendor
+    command: ["go", "run", "cmd/rabbitmq_consumer/main.go"]
+
+  # Development-specific publisher
+  publisher:
+    environment:
+      - LOG_LEVEL=debug
+    volumes:
+      - .:/app
+      - /app/vendor
+    profiles: ["manual"]
+
+  # Development-specific subscriber
+  subscriber:
+    environment:
+      - LOG_LEVEL=debug
+    volumes:
+      - .:/app
+      - /app/vendor
+    profiles: ["manual"]
+
+  # Development database with exposed ports
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+
+  # Development Redis with exposed ports
+  redis:
+    ports:
+      - "6379:6379"
+
+  # Development RabbitMQ with exposed ports
+  rabbitmq:
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # Development MQTT with exposed ports
+  mqtt:
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+  # Development Adminer
+  adminer:
+    ports:
+      - "8081:8080"
+
+  # Development tools
+  dev-tools:
+    image: golang:1.23-alpine
+    container_name: dev-tools
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["tail", "-f", "/dev/null"]
+    profiles: ["manual"]
+    networks:
+      - tracker-net 
