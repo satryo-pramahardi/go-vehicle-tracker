@@ -1,0 +1,101 @@
+definitions:
+  internal_delivery_http.ErrorResponse:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties: true
+        type: object
+      error:
+        type: string
+    type: object
+  internal_delivery_http.LocationResponse:
+    properties:
+      heading:
+        type: number
+      latitude:
+        type: number
+      longitude:
+        type: number
+      speed:
+        type: number
+      timestamp:
+        type: string
+      vehicle_id:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  title: Vehicle Tracker API
+paths:
+  /healthz:
+    get:
+      description: Check if the API is up
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /vehicles/{vehicle_id}/history:
+    get:
+      description: Get the location history for a vehicle within a time range
+      parameters:
+      - description: Vehicle ID
+        in: path
+        name: vehicle_id
+        required: true
+        type: string
+      - description: Start time (RFC3339)
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: End time (RFC3339)
+        in: query
+        name: end
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      summary: Get vehicle location history
+      tags:
+      - vehicles
+  /vehicles/{vehicle_id}/location:
+    get:
+      description: Get the latest location for a vehicle
+      parameters:
+      - description: Vehicle ID
+        in: path
+        name: vehicle_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.LocationResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ErrorResponse'
+      summary: Get latest location
+      tags:
+      - vehicles
+swagger: "2.0"

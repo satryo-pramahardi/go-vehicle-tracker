@@ -45,6 +45,7 @@ This project demonstrates a **Clean Architecture** implementation with **Domain-
 - **Event-Driven Architecture** - Asynchronous processing with RabbitMQ
 - **Microservices Design** - Independent services for different concerns
 - **RESTful API** - HTTP endpoints for data access and management
+- **Swagger Documentation** - Interactive API documentation
 - **MQTT Integration** - IoT device communication support
 - **Docker Containerization** - Complete containerized deployment
 - **PostgreSQL Database** - Reliable data persistence
@@ -59,6 +60,7 @@ This project demonstrates a **Clean Architecture** implementation with **Domain-
 - **PostgreSQL** - Primary database
 - **Redis** - Caching and message queuing
 - **RabbitMQ** - Message broker for event processing
+- **Swagger** - API documentation and testing
 
 ### Infrastructure
 - **Docker** - Containerization
@@ -93,7 +95,11 @@ go-vehicle-tracker/
 │   │   │   └── event_service.go      # Event handling
 │   │   └── usecase/             # Application use cases
 │   ├── delivery/                # Delivery layer
-│   │   ├── http/                # HTTP handlers and routes
+│   │   ├── http/                # HTTP API layer
+│   │   │   ├── handlers.go      # API endpoint handlers
+│   │   │   ├── router.go        # Route definitions
+│   │   │   ├── middleware.go    # CORS, logging, etc.
+│   │   │   └── types.go         # Request/response types
 │   │   └── mqtt/                # MQTT client and handlers
 │   ├── repository/              # Data access layer
 │   │   ├── interfaces.go        # Repository interfaces
@@ -106,11 +112,16 @@ go-vehicle-tracker/
 │   │   └── gorm.go              # GORM configuration
 │   └── geo/                     # Geographic utilities
 │       └── haversine.go         # Distance calculation
+├── docs/                        # Swagger documentation
+│   ├── docs.go                  # Generated Swagger docs
+│   ├── swagger.json             # OpenAPI specification
+│   └── swagger.yaml             # OpenAPI specification (YAML)
 ├── docker/                      # Docker configurations
 │   ├── mqtt/                    # MQTT broker config
 │   ├── migration/               # Database migration
 │   └── subscriber/              # MQTT subscriber
 ├── docker-compose.yaml          # Multi-service orchestration
+├── Makefile                     # Development commands
 ├── go.mod                       # Go module definition
 └── README.md                    # Project documentation
 ```
@@ -142,26 +153,250 @@ go-vehicle-tracker/
 - Go 1.23+
 
 ### Running the Application
+
+#### Using Makefile (Recommended)
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd go-vehicle-tracker
 
 # Start all services
-docker compose up -d
+make docker-up
 
 # Run database migrations
-docker compose run --rm migrate
+make migrate
 
 # Check service status
-docker compose ps
+make status
+```
+
+#### Using Docker Compose directly
+```bash
+# Clone the repository
+git clone <repository-url>
+cd go-vehicle-tracker
+
+# Start all services
+docker-compose up -d
+
+# Run database migrations
+docker-compose run --rm migrate
+
+# Check service status
+docker-compose ps
 ```
 
 ### Accessing Services
 - **API Server**: http://localhost:8080
-- **RabbitMQ Management**: http://localhost:15672 (admin/password)
+- **Swagger Documentation**: http://localhost:8080/swagger/index.html
+- **RabbitMQ Management**: http://localhost:15673 (admin/password)
+- **Adminer (Database)**: http://localhost:8081
 - **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
+
+## API Documentation
+
+### Interactive Documentation
+The API includes **Swagger UI** for interactive documentation and testing:
+- **URL**: http://localhost:8080/swagger/index.html
+- **Features**: 
+  - Interactive API testing
+  - Parameter input forms
+  - Request/response examples
+  - Try-it-out functionality
+
+### Base URL
+```
+http://localhost:8080
+```
+
+### Authentication
+Currently, the API does not require authentication for development purposes.
+
+### Response Format
+All API responses follow a consistent format:
+
+#### Success Response
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": { ... }
+}
+```
+
+#### Error Response
+```json
+{
+  "error": "error message",
+  "code": "ERROR_CODE",
+  "details": { ... }
+}
+```
+
+### Endpoints
+
+#### Health Check
+```http
+GET /healthz
+```
+
+**Response:**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "status": "ok"
+  }
+}
+```
+
+#### Get Latest Vehicle Location
+```http
+GET /api/v1/vehicles/{vehicle_id}/location
+```
+
+**Parameters:**
+- `vehicle_id` (path): Vehicle identifier
+
+**Response:**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "vehicle_id": "TJ001",
+    "latitude": -6.193125,
+    "longitude": 106.820233,
+    "timestamp": "2025-01-15T10:30:00Z",
+    "speed": 5.0,
+    "heading": 90.0
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid vehicle ID
+- `404 Not Found`: Vehicle not found
+
+#### Get Vehicle Location History
+```http
+GET /api/v1/vehicles/{vehicle_id}/history?start={start_time}&end={end_time}
+```
+
+**Parameters:**
+- `vehicle_id` (path): Vehicle identifier
+- `start` (query): Start time in RFC3339 format (e.g., `2025-01-15T10:00:00Z`)
+- `end` (query): End time in RFC3339 format (e.g., `2025-01-15T11:00:00Z`)
+
+**Response:**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "vehicle_id": "TJ001",
+    "start_time": "2025-01-15T10:00:00Z",
+    "end_time": "2025-01-15T11:00:00Z",
+    "count": 2,
+    "locations": [
+      {
+        "vehicle_id": "TJ001",
+        "latitude": -6.193125,
+        "longitude": 106.820233,
+        "timestamp": "2025-01-15T10:30:00Z",
+        "speed": 5.0,
+        "heading": 90.0
+      },
+      {
+        "vehicle_id": "TJ001",
+        "latitude": -6.194000,
+        "longitude": 106.821000,
+        "timestamp": "2025-01-15T10:45:00Z",
+        "speed": 5.0,
+        "heading": 90.0
+      }
+    ]
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Missing or invalid parameters
+- `404 Not Found`: Vehicle not found
+
+### API Testing Examples
+
+#### Using Swagger UI (Recommended)
+1. Open http://localhost:8080/swagger/index.html
+2. Click on any endpoint
+3. Click "Try it out"
+4. Fill in the parameters
+5. Click "Execute"
+
+#### Using curl
+```bash
+# Health check
+curl http://localhost:8080/healthz
+
+# Get latest location
+curl http://localhost:8080/api/v1/vehicles/TJ001/location
+
+# Get location history
+curl "http://localhost:8080/api/v1/vehicles/TJ001/history?start=2025-01-15T10:00:00Z&end=2025-01-15T11:00:00Z"
+```
+
+#### Using Makefile
+```bash
+# Test API health
+make health
+
+# Test specific endpoints
+curl -s http://localhost:8080/api/v1/vehicles/TEST001/location
+```
+
+## Development Commands
+
+The project includes a comprehensive Makefile for common development tasks:
+
+### Basic Commands
+```bash
+make help          # Show all available commands
+make build         # Build all Go binaries
+make run           # Run the API locally
+make test          # Run all tests
+make clean         # Clean build artifacts
+```
+
+### Docker Commands
+```bash
+make docker-up     # Start all services
+make docker-down   # Stop all services
+make docker-build  # Build all Docker images
+make docker-logs   # Show all service logs
+make status        # Show service status
+make health        # Check service health
+```
+
+### Database Commands
+```bash
+make migrate       # Run database migrations
+make db-reset      # Reset database (WARNING: deletes all data)
+```
+
+### Testing Commands
+```bash
+make test-mqtt     # Test MQTT connection
+make test-geofence # Test geofence functionality
+```
+
+### Log Commands
+```bash
+make docker-logs-api       # Show API logs
+make docker-logs-worker    # Show worker logs
+make docker-logs-consumer  # Show RabbitMQ consumer logs
+```
 
 ## Data Flow Diagrams
 
@@ -309,12 +544,12 @@ CREATE TABLE geofence_events (
 
 ```bash
 # View all service logs
-docker compose logs -f
+make docker-logs
 
 # View specific service logs
-docker compose logs -f workers
-docker compose logs -f rabbitmq-consumer
-docker compose logs -f api
+make docker-logs-api
+make docker-logs-worker
+make docker-logs-consumer
 ```
 
 ## Testing the System
@@ -327,7 +562,7 @@ The system includes a **vehicle location publisher** that simulates a moving veh
 
 ```bash
 # Start the publisher with default settings
-docker compose run --rm publisher
+docker-compose run --rm publisher
 
 # This will:
 # - Connect to MQTT broker at mqtt:1883
@@ -342,20 +577,20 @@ The publisher supports various command-line flags for customization:
 
 ```bash
 # Custom vehicle ID and interval
-docker compose run --rm publisher --vehicle-id BUS001 --interval 5
+docker-compose run --rm publisher --vehicle-id BUS001 --interval 5
 
 # Simulate a specific number of messages
-docker compose run --rm publisher --count 10 --interval 1
+docker-compose run --rm publisher --count 10 --interval 1
 
 # Custom trip parameters
-docker compose run --rm publisher \
+docker-compose run --rm publisher \
   --vehicle-id TEST001 \
   --speed 10.0 \
   --trip-length 500 \
   --interval 3
 
 # Use a different MQTT broker
-docker compose run --rm publisher --broker tcp://localhost:1883
+docker-compose run --rm publisher --broker tcp://localhost:1883
 ```
 
 #### Publisher Options
@@ -373,13 +608,13 @@ docker compose run --rm publisher --broker tcp://localhost:1883
 
 1. **Start the publisher**:
    ```bash
-   docker compose run --rm publisher --vehicle-id TEST001 --interval 1
+   docker-compose run --rm publisher --vehicle-id TEST001 --interval 1
    ```
 
 2. **Monitor geofence alerts**:
    ```bash
    # In another terminal
-   docker compose logs -f rabbitmq-consumer
+   make docker-logs-consumer
    ```
 
 3. **Watch for alerts** when the vehicle enters the geofence area around Bundaran HI.
@@ -402,7 +637,7 @@ mosquitto_pub -h localhost -t "fleet/vehicle/TJ001/location" \
 
 ```bash
 # Get latest location via API
-curl http://localhost:8080/api/vehicles/TJ001/location
+curl http://localhost:8080/api/v1/vehicles/TJ001/location
 
 # Check geofence events in database
 docker exec postgres psql -U admin -d vehicle_tracker \
