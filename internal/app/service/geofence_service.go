@@ -19,8 +19,7 @@ type GeofenceEvent struct {
 	Location     model.VehicleLocation
 }
 
-// CheckGeofences checks if a vehicle location triggers any geofence events
-// Uses a buffer zone (radius ± 5m) to avoid excessive DB queries
+// CheckGeofences detects geofence entry/exit events with a 5m buffer zone
 func CheckGeofences(loc model.VehicleLocation, geofences []model.Geofence, db *gorm.DB) []GeofenceEvent {
 	var events []GeofenceEvent
 	for _, geofence := range geofences {
@@ -30,8 +29,11 @@ func CheckGeofences(loc model.VehicleLocation, geofences []model.Geofence, db *g
 		inside := distance <= geofence.Radius
 
 		if distance >= bufferMin && distance <= bufferMax {
-			// Near the boundary, check event log for last state
+			// Check last event state near boundary
 			lastEventType := getLastGeofenceEventType(loc.VehicleID, geofence.ID, db)
+
+			// If lastEventType matches, do nothing (no state change)
+			// else: outside buffer, do nothing (assume state hasn't changed)
 			if inside && lastEventType != model.GeofenceEventEntry {
 				events = append(events, GeofenceEvent{
 					VehicleID:    loc.VehicleID,
@@ -49,14 +51,16 @@ func CheckGeofences(loc model.VehicleLocation, geofences []model.Geofence, db *g
 					Location:     loc,
 				})
 			}
-			// If lastEventType matches, do nothing (no state change)
-		} // else: outside buffer, do nothing (assume state hasn't changed)
+		}
 	}
 	return events
 }
 
-// getLastGeofenceEventType queries the geofence events table for the last event type for a specific vehicle and geofence
+// Get last geofence event type for vehicle and geofence
 func getLastGeofenceEventType(vehicleID string, geofenceID int64, db *gorm.DB) string {
+	if db == nil {
+		return ""
+	}
 	var lastEvent model.GeofenceEvent
 	err := db.Where("vehicle_id = ? AND geofence_id = ? AND event_type IN (?, ?)",
 		vehicleID, geofenceID, model.GeofenceEventEntry, model.GeofenceEventExit).
@@ -64,7 +68,7 @@ func getLastGeofenceEventType(vehicleID string, geofenceID int64, db *gorm.DB) s
 		First(&lastEvent).Error
 
 	if err != nil {
-		return "" // No previous event found
+		return ""
 	}
 	return lastEvent.EventType
 }
@@ -75,14 +79,13 @@ func CallCheckGeofences(loc model.VehicleLocation, db *gorm.DB, rdb *redis.Clien
 
 	events := CheckGeofences(loc, geofences, db)
 	for _, event := range events {
-		// Save geofence event to database
 		saveGeofenceEvent(event, db, rdb)
 
-		// Publish RabbitMQ alert for entry events (asynchronously)
+		// Publish RabbitMQ alert
 		if event.EventType == model.GeofenceEventEntry && rabbitMQ != nil {
 			go func(e GeofenceEvent) {
 				if err := rabbitMQ.PublishGeofenceAlert(rdb, e.VehicleID, e.Location.Latitude, e.Location.Longitude, e.EventType); err != nil {
-					log.Printf("⚠️ Failed to publish RabbitMQ alert: %v", err)
+					log.Printf("[GEOFENCE_SERVICE] Failed to publish RabbitMQ alert: %v", err)
 				}
 			}(event)
 		}
@@ -90,7 +93,6 @@ func CallCheckGeofences(loc model.VehicleLocation, db *gorm.DB, rdb *redis.Clien
 }
 
 func saveGeofenceEvent(event GeofenceEvent, db *gorm.DB, rdb *redis.Client) {
-	// Save to dedicated geofence events table
 	geofenceEvent := model.GeofenceEvent{
 		VehicleID:  event.VehicleID,
 		GeofenceID: event.GeofenceID,
@@ -102,7 +104,7 @@ func saveGeofenceEvent(event GeofenceEvent, db *gorm.DB, rdb *redis.Client) {
 
 	payload, _ := json.Marshal(event)
 	if err := db.Create(&geofenceEvent).Error; err != nil {
-		log.Printf("Failed to save geofence event: %v", err)
+		log.Printf("[GEOFENCE_SERVICE] Failed to save geofence event: %v", err)
 		pushDeadLetter(rdb, string(payload), err)
 		return
 	}

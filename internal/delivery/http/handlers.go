@@ -38,7 +38,7 @@ func ResponseBadRequest(c *gin.Context, message string) {
 	})
 }
 
-// Helper function to convert HTTP status code to error code
+// Convert HTTP status code to error code
 func getErrorCode(statusCode int) string {
 	switch statusCode {
 	case http.StatusBadRequest:
@@ -79,7 +79,7 @@ func (h *VehicleHandler) GetLatestLocation(c *gin.Context) {
 
 	loc, err := h.vehicleRepo.GetLatestLocation(vehicleID)
 
-	// Error Handlers
+	// Handle errors
 	if err != nil {
 		ResponseNotFound(c, "vehicle not found")
 		return

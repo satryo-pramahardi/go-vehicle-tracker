@@ -9,17 +9,17 @@ import (
 func SetupRouter(handler *VehicleHandler) *gin.Engine {
 	router := gin.Default()
 
-	// Health check (without middleware)
+	// Health check endpoint
 	router.GET("/healthz", handler.HealthCheck)
 
 	// Swagger documentation
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Middleware
+	// Apply middleware
 	router.Use(corsMiddleware())
 	router.Use(loggingMiddleware())
 
-	// Routes
+	// API routes
 	api := router.Group("/api/v1")
 	vehicles := api.Group("/vehicles")
 	{

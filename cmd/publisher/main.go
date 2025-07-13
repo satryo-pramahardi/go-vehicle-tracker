@@ -67,7 +67,7 @@ func main() {
 		topic = fmt.Sprintf("fleet/vehicle/%s/location", id)
 	}
 
-	// Signal handling for graceful shutdown
+	// Setup graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	done := make(chan struct{})
@@ -90,7 +90,7 @@ func main() {
 		select {
 		case <-done:
 			client.Disconnect(250)
-			log.Printf("Finished sending %d messages", sent)
+			log.Printf("[PUBLISHER] Finished sending %d messages", sent)
 			return
 		case <-ticker.C:
 			lat := baseLat + offset
@@ -118,7 +118,7 @@ func main() {
 			sent++
 			if *count > 0 && sent >= *count {
 				client.Disconnect(250)
-				log.Printf("Finished sending %d messages", sent)
+				log.Printf("[PUBLISHER] Finished sending %d messages", sent)
 				return
 			}
 

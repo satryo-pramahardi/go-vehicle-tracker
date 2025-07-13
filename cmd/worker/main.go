@@ -24,7 +24,7 @@ func main() {
 	// Connect to Postgres
 	db, err := gorm.Open(postgres.Open(dbDsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Failed to connect to DB: %v", err)
+		log.Fatalf("[WORKER] Failed to connect to DB: %v", err)
 	}
 
 	// Start workers as goroutines

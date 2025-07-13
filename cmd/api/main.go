@@ -30,8 +30,8 @@ func main() {
 	handler := http.NewVehicleHandler(repo)
 	router := http.SetupRouter(handler)
 
-	log.Printf("Starting API server on port %s", port)
+	log.Printf("[API_SERVER] Starting API server on port %s", port)
 	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		log.Fatalf("[API_SERVER] Failed to start server: %v", err)
 	}
 }

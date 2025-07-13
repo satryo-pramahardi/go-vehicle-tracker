@@ -20,12 +20,11 @@ func PushLocationUpdateToRedis(rdb *redis.Client, eventType, source string, payl
 
 	errCh := make(chan error, 2)
 
-	// Push to event_log:queue
+	// Push to both queues concurrently
 	go func() {
 		errCh <- sendEventToRedis(rdb, "event_log:queue", envelope)
 	}()
 
-	// Push to vehicle_location:queue
 	go func() {
 		errCh <- sendEventToRedis(rdb, "vehicle_location:queue", envelope)
 	}()
@@ -75,7 +74,7 @@ func getEventFromRedis(rdb *redis.Client, queueName string) (model.EventEnvelope
 		return model.EventEnvelope{}, "", fmt.Errorf("invalid result format")
 	}
 
-	rawJSON := res[1] // Keep the raw JSON
+	rawJSON := res[1]
 
 	var envelope model.EventEnvelope
 	err = json.Unmarshal([]byte(rawJSON), &envelope)
@@ -84,4 +83,9 @@ func getEventFromRedis(rdb *redis.Client, queueName string) (model.EventEnvelope
 	}
 
 	return envelope, rawJSON, nil
+}
+
+// GetEventFromRedis is an exported version for testing
+func GetEventFromRedis(rdb *redis.Client, queueName string) (model.EventEnvelope, string, error) {
+	return getEventFromRedis(rdb, queueName)
 }

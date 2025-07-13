@@ -58,6 +58,6 @@ func (c *MQTTClient) Subscribe(topic string, callback mqtt.MessageHandler) error
 func (c *MQTTClient) Disconnect() {
 	if c.client != nil {
 		c.client.Disconnect(250)
-		log.Println("[MQTT CLIENT]🔄 Disconnected from MQTT broker")
+		log.Println("[MQTT CLIENT] Disconnected from MQTT broker")
 	}
 }

@@ -25,30 +25,30 @@ func main() {
 
 	conn, err := amqp.Dial(amqpURL)
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+		log.Fatalf("[RABBITMQ_CONSUMER] Failed to connect to RabbitMQ: %v", err)
 	}
 	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("Failed to open channel: %v", err)
+		log.Fatalf("[RABBITMQ_CONSUMER] Failed to open channel: %v", err)
 	}
 	defer ch.Close()
 
 	// Declare the queue
 	q, err := ch.QueueDeclare(
-		"geofence.event", // queue name
-		true,             // durable
-		false,            // delete when unused
-		false,            // exclusive
-		false,            // no-wait
-		nil,              // arguments
+		"geofence.event",
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
-		log.Fatalf("Failed to declare queue: %v", err)
+		log.Fatalf("[RABBITMQ_CONSUMER] Failed to declare queue: %v", err)
 	}
 
-	// Consume messages
+	// Setup message consumer
 	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
@@ -59,12 +59,12 @@ func main() {
 		nil,    // args
 	)
 	if err != nil {
-		log.Fatalf("Failed to register consumer: %v", err)
+		log.Fatalf("[RABBITMQ_CONSUMER] Failed to register consumer: %v", err)
 	}
 
-	log.Println("🚨 Geofence Alert Consumer Started")
-	log.Println("📡 Listening for geofence events on queue: geofence.event")
-	log.Println("⏳ Waiting for messages...")
+	log.Println("[RABBITMQ_CONSUMER] 🚨 Geofence Alert Consumer Started")
+	log.Println("[RABBITMQ_CONSUMER] 📡 Listening for geofence events on queue: geofence.event")
+	log.Println("[RABBITMQ_CONSUMER] ⏳ Waiting for messages...")
 
 	forever := make(chan bool)
 
@@ -72,22 +72,18 @@ func main() {
 		for d := range msgs {
 			var alert GeofenceAlert
 			if err := json.Unmarshal(d.Body, &alert); err != nil {
-				log.Printf("❌ Failed to unmarshal alert: %v", err)
+				log.Printf("[RABBITMQ_CONSUMER] ❌ Failed to unmarshal alert: %v", err)
 				continue
 			}
 
-			log.Printf("🚨 GEOFENCE ALERT RECEIVED!")
-			log.Printf("   Event Type: %s", alert.EventType)
-			log.Printf("   Vehicle ID: %s", alert.VehicleID)
-			log.Printf("   Location: (%.4f, %.4f)", alert.Latitude, alert.Longitude)
-			log.Printf("   Timestamp: %d", alert.Timestamp)
-			log.Printf("   ---")
+			log.Printf("[RABBITMQ_CONSUMER] 🚨 GEOFENCE ALERT RECEIVED!")
+			log.Printf("[RABBITMQ_CONSUMER]    Event Type: %s", alert.EventType)
+			log.Printf("[RABBITMQ_CONSUMER]    Vehicle ID: %s", alert.VehicleID)
+			log.Printf("[RABBITMQ_CONSUMER]    Location: (%.4f, %.4f)", alert.Latitude, alert.Longitude)
+			log.Printf("[RABBITMQ_CONSUMER]    Timestamp: %d", alert.Timestamp)
+			log.Printf("[RABBITMQ_CONSUMER]    ---")
 
-			// Here you could:
-			// - Send SMS notification
-			// - Update dashboard
-			// - Log to external system
-			// - Trigger other business logic
+			// Process alert (SMS, dashboard update, external logging, etc.)
 		}
 	}()
 

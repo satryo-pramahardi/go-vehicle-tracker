@@ -18,7 +18,7 @@ func main() {
 	client := mqtt_handler.NewMQTTClient(config)
 
 	if err := client.Connect(); err != nil {
-		log.Fatalf("Failed to connect to MQTT broker: %v", err)
+		log.Fatalf("[SUBSCRIBER] Failed to connect to MQTT broker: %v", err)
 	}
 
 	redisAddr := os.Getenv("REDIS_ADDR")
@@ -26,9 +26,9 @@ func main() {
 		Addr: redisAddr,
 	})
 
-	// Subscribe with the handler from internal/delivery/mqtt/handler.go
+	// Subscribe to MQTT topic
 	if err := client.Subscribe(config.Topic, mqtt_handler.MessageHandler(rdb)); err != nil {
-		log.Fatalf("Failed to subscribe to topic: %v", err)
+		log.Fatalf("[SUBSCRIBER] Failed to subscribe to topic: %v", err)
 	}
 
 	// Wait for interrupt signal

@@ -2,7 +2,7 @@ package http
 
 import "time"
 
-// Response structures
+// API response structures
 type Response struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
@@ -24,7 +24,7 @@ func (e *NotFoundError) Error() string {
 	return e.Message
 }
 
-// Request/Response structures
+// Location and health structures
 type LocationResponse struct {
 	VehicleID string    `json:"vehicle_id"`
 	Latitude  float64   `json:"latitude"`

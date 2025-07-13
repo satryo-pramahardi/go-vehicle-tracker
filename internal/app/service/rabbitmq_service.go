@@ -34,14 +34,14 @@ func NewRabbitMQService(amqpURL string) (*RabbitMQService, error) {
 		return nil, err
 	}
 
-	// Declare the queue for geofence events
+	// Declare geofence events queue
 	_, err = ch.QueueDeclare(
-		"geofence.event", // queue name
-		true,             // durable
-		false,            // delete when unused
-		false,            // exclusive
-		false,            // no-wait
-		nil,              // arguments
+		"geofence.event",
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
 		return nil, err
@@ -68,23 +68,23 @@ func (r *RabbitMQService) PublishGeofenceAlert(rdb *redis.Client, vehicleID stri
 	}
 
 	err = r.channel.Publish(
-		"",               // exchange (default)
+		"",               // default exchange
 		"geofence.event", // routing key
 		false,            // mandatory
 		false,            // immediate
 		amqp.Publishing{
-			DeliveryMode: amqp.Persistent, // Persistent delivery
+			DeliveryMode: amqp.Persistent,
 			ContentType:  "application/json",
 			Body:         body,
 		},
 	)
 
 	if err != nil {
-		log.Printf("⚠️ Failed to publish geofence alert: %v", err)
+		log.Printf("[RABBITMQ_SERVICE] ⚠️ Failed to publish geofence alert: %v", err)
 		return err
 	}
 
-	log.Printf("📡 Published geofence alert: %s for vehicle %s at (%.4f, %.4f)",
+	log.Printf("[RABBITMQ_SERVICE] 📡 Published geofence alert: %s for vehicle %s at (%.4f, %.4f)",
 		eventType, vehicleID, latitude, longitude)
 	envelope := model.EventEnvelope{
 		EventType: eventType,

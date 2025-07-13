@@ -11,11 +11,11 @@ import (
 )
 
 func SaveVehicleLocationFromRedis(rdb *redis.Client, db *gorm.DB) {
-	// Initialize RabbitMQ service
+	// Setup RabbitMQ service
 	rabbitMQ, err := NewRabbitMQService("amqp://admin:password@rabbitmq:5672/")
 	if err != nil {
 		log.Printf("[LOCATION_WORKER] Failed to initialize RabbitMQ: %v", err)
-		// Continue without RabbitMQ - geofence events will still be saved to DB
+		// Continue without RabbitMQ - geofence events still saved to DB
 		rabbitMQ = nil
 	} else {
 		defer rabbitMQ.Close()

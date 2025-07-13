@@ -28,6 +28,18 @@ test-coverage:
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
+# Run tests with race detector
+test-race:
+	go test -race ./...
+
+# Run only delivery/http tests
+test-http:
+	go test -v ./internal/delivery/http/
+
+# Run integration tests (requires services running)
+test-integration:
+	go test -v ./tests/integration/
+
 # Clean build artifacts
 clean:
 	rm -rf bin/

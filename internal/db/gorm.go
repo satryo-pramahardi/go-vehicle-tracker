@@ -24,7 +24,7 @@ func ConnectGorm() *gorm.DB {
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
-		log.Fatalf("💣 Failed to connect to database: %v", err)
+		log.Fatalf("[DATABASE] Failed to connect to database: %v", err)
 	}
 	return db
 }

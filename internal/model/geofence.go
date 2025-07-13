@@ -5,7 +5,7 @@ type Geofence struct {
 	Name      string  `gorm:"not null"`
 	CenterLat float64 `gorm:"not null"`
 	CenterLng float64 `gorm:"not null"`
-	Radius    float64 `gorm:"not null"` // in meters
+	Radius    float64 `gorm:"not null"` // meters
 	Active    bool    `gorm:"default:true"`
 }
 
